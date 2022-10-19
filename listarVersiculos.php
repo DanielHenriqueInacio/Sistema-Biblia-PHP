@@ -1,10 +1,30 @@
 <?php
 include "verificaLogin.php";
 include "conexao.php";
-include "funcoes.php";
 
-$testamento = $_GET['testamento'] ?? false;
-$livros = listarLivros($conn, $testamento);
+$livro = $_GET['livro'] ?? false;
+$capitulo = $_GET['capitulo'] ?? 1;
+
+$sql = "SELECT 
+    v.id, v.chapter, v.verse, v.text, b.name AS livro
+FROM
+    verses v
+        INNER JOIN
+    books b ON v.book = b.id
+	where book = :livro and chapter = :capitulo;";
+
+$stmt = $conn->prepare($sql);
+$stmt->bindParam(":livro", $livro);
+$stmt->bindParam(":capitulo", $capitulo);
+$stmt->execute();
+$versiculos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$sql = "select max(chapter) as qtde from verses where book = :livro;";
+
+$stmt = $conn->prepare($sql);
+$stmt->bindParam(":livro", $livro);
+$stmt->execute();
+$capitulos = $stmt->fetch(PDO::FETCH_ASSOC);
 
 ?>
 <!DOCTYPE html>
@@ -34,7 +54,7 @@ $livros = listarLivros($conn, $testamento);
         </button>
         <div class="collapse navbar-collapse" id="navcol-5">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link active" href="index.php">Home</a></li>
+                <li class="nav-item"><a class="nav-link active" href="#">Home</a></li>
                 <li class="nav-item"><a class="nav-link" href="listarFavoritos.php">Favoritos</a></li>
                 <li class="nav-item"><a class="nav-link" href="#">Minhas anotações</a></li>
                 <li class="nav-item dropdown">
@@ -61,37 +81,44 @@ $livros = listarLivros($conn, $testamento);
 <div class="container my-5">
     <div class="row">
         <div class="col-md-12">
-
-                <?php
-
-                if($testamento == 1) {
-                    echo  "<h3 class='mb-3'>Livros do Velho Testamento</h3>";
-                }elseif ($testamento == 2) {
-                    echo  "<h3 class='mb-3'>Livros do Novo Testamento</h3>";
-                }else {
-                    echo  "<h3 class='mb-3'>Todos os Livros da Bíblia</h3>";
-                }
-
-                 ?>
-
+            <h2><?php echo $versiculos[0]['livro'] ?>, capítulo <?php echo $capitulo ?></h2>
         </div>
     </div>
     <div class="row">
-        <div class="col-md-12">
-            <ul class="list-group">
-
-                <?php foreach($livros as $livro):?>
-                <li class="list-group-item">
-                    <span><a href="listarVersiculos.php?livro=<?php echo $livro['id'] ?>" class=""><?php echo $livro['livro'] ?></a></span>
-                    <span class="float-end"><?php echo $livro['testamento'] ?></span>
-                </li>
-                <?php endforeach;?>
-
-            </ul>
+        <div class="col-md-8">
+            <?php foreach ($versiculos as $versiculo): ?>
+                <p><sup><?php echo $versiculo['verse'] ?></sup> <?php echo $versiculo['text'] ?>
+                    <a href="#" class="bt_afavoritar" data-versiculo="<?php echo $versiculo['id'] ?>" title="Clique para afavoritar esse versículo">
+                        <i class="fa fa-star-o"></i>
+                    </a>
+                </p>
+            <?php endforeach; ?>
+        </div>
+        <div class="col-md-4">
+            <?php for($i = 1; $i <= $capitulos['qtde']; $i++) :?>
+            <a href="listarVersiculos.php?livro=<?php echo $livro ?>&capitulo=<?php echo $i ?>"
+               class="btn btn-<?php echo $capitulo == $i ? "secondary" : "info" ?>"
+            >
+                <?php echo $i ?>
+            </a>
+            <?php endfor; ?>
         </div>
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.1.min.js" integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ=" crossorigin="anonymous"></script>
+
+<script>
+    window.onload = function() {
+        $(".bt_afavoritar").click(function() {
+            let id_versiculo = $(this).data("versiculo");
+            $.post("favoritarVersiculo.php", {versiculo: id_versiculo}, function (response){
+
+            }, "json");
+        })
+    }
+</script>
+
 </body>
 
 </html>

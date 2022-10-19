@@ -19,7 +19,7 @@ $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 if ($usuario && password_verify($senha, $usuario["senha"])) {
     unset($usuario["senha"]);
     $_SESSION["usuario"] = $usuario;
-    header("location: home.php");
+    header("location: index.php");
 } else {
     flashMsg("danger", "Email e/ou Senha inválidos!", "login.php");
 }
